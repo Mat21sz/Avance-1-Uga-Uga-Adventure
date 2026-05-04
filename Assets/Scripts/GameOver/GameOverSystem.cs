@@ -10,7 +10,7 @@ public class GameOverSystem : MonoBehaviour
         Debug.Log("Botón Retry presionado. Cargando el nivel desde el inicio...");
         
         // Carga tu nivel 
-        SceneManager.LoadScene("ScenaPrincipal");
+        SceneManager.LoadScene("NivelJefe");
     }
 
     // Este método se asignará al botón "MENU"

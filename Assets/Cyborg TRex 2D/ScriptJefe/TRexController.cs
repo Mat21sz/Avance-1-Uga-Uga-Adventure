@@ -7,13 +7,19 @@ public class TRexController : MonoBehaviour
     public float fuerzaSalto = 6f;
 
     [Header("Configuración de IA")]
-    public float tiempoEntreAcciones = 2f;
+    public float tiempoEntreMovimientos = 2f; // Cada cuánto decide reorientarse hacia el jugador
+    public float tiempoEntreAtaques = 4f;     // Cada cuánto tiempo ataca obligatoriamente
+
+    [Header("Salud del T-Rex")]
+    public int vida = 10; // Golpes necesarios con la lanza para derrotarlo
 
     private Rigidbody2D rb;
     private Animator anim;
-    private float temporizador;
 
-    private int estadoActual = 1;
+    private float temporizadorMovimiento;
+    private float temporizadorAtaque;
+
+    private int estadoActual = 1; // 1: Perseguir, 2: Atacar, 3: Saltar
     private float direccionHorizontal = -1f;
 
     void Start()
@@ -21,44 +27,52 @@ public class TRexController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
 
-        temporizador = tiempoEntreAcciones;
+        temporizadorMovimiento = tiempoEntreMovimientos;
+        temporizadorAtaque = tiempoEntreAtaques;
+
         IgnorarPlataformas();
+        IgnorarAlJugador();
     }
 
     void Update()
     {
-        temporizador -= Time.deltaTime;
+        temporizadorAtaque -= Time.deltaTime;
+        temporizadorMovimiento -= Time.deltaTime;
 
-        if (temporizador <= 0)
+        // 1. Prioridad: Atacar
+        if (temporizadorAtaque <= 0)
         {
-            TomarDecisionAleatoria();
-            temporizador = tiempoEntreAcciones;
+            EjecutarAtaque();
+            temporizadorAtaque = tiempoEntreAtaques;
+            temporizadorMovimiento = tiempoEntreMovimientos + 0.5f;
+        }
+        // 2. Prioridad: Moverse / Perseguir
+        else if (temporizadorMovimiento <= 0 && estadoActual != 2)
+        {
+            TomarDecisionMovimiento();
+            temporizadorMovimiento = tiempoEntreMovimientos;
         }
 
+        // Aplicar la velocidad solo si está persiguiendo (1)
         if (estadoActual == 1)
         {
             rb.linearVelocity = new Vector2(velocidadCaminar * direccionHorizontal, rb.linearVelocity.y);
         }
     }
 
-    void TomarDecisionAleatoria()
+    void TomarDecisionMovimiento()
     {
         CancelInvoke("VolverACaminar");
 
         int probabilidad = Random.Range(0, 100);
 
-        // --- NUEVAS PROBABILIDADES MÁS AGRESIVAS ---
-        if (probabilidad < 20)
+        if (probabilidad < 70)
         {
-            VolverACaminar(); // 20% Caminar
-        }
-        else if (probabilidad < 60)
-        {
-            EjecutarSalto(); // 40% Saltar (del 20 al 59)
+            VolverACaminar(); // 70% de seguir caminando hacia Krom
         }
         else
         {
-            EjecutarAtaque(); // 40% Atacar (del 60 al 99)
+            EjecutarSalto();  // 30% de dar un salto impredecible
         }
     }
 
@@ -69,9 +83,28 @@ public class TRexController : MonoBehaviour
         anim.SetBool("Atacar", false);
         anim.SetBool("Saltar", false);
 
-        int direccionAleatoria = Random.Range(0, 2);
-        if (direccionAleatoria == 0) direccionHorizontal = 1f;
-        else direccionHorizontal = -1f;
+        // --- LÓGICA DE PERSECUCIÓN ---
+        GameObject jugador = GameObject.FindGameObjectWithTag("Player");
+
+        if (jugador != null)
+        {
+            // Mira hacia dónde está Krom
+            if (jugador.transform.position.x > transform.position.x)
+            {
+                direccionHorizontal = 1f;
+            }
+            else
+            {
+                direccionHorizontal = -1f;
+            }
+        }
+        else
+        {
+            // Plan B por si el jugador ya no está
+            int direccionAleatoria = Random.Range(0, 2);
+            if (direccionAleatoria == 0) direccionHorizontal = 1f;
+            else direccionHorizontal = -1f;
+        }
 
         VoltearSprite();
     }
@@ -83,7 +116,9 @@ public class TRexController : MonoBehaviour
         anim.SetBool("Atacar", true);
         anim.SetBool("Saltar", false);
 
+        // Se detiene para morder
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
         Invoke("VolverACaminar", 0.5f);
     }
 
@@ -95,6 +130,7 @@ public class TRexController : MonoBehaviour
         anim.SetBool("Saltar", true);
 
         rb.linearVelocity = new Vector2(0, fuerzaSalto);
+
         Invoke("VolverACaminar", 0.8f);
     }
 
@@ -109,24 +145,73 @@ public class TRexController : MonoBehaviour
     void IgnorarPlataformas()
     {
         GameObject[] plataformas = GameObject.FindGameObjectsWithTag("Plataforma");
-        Collider2D miCollider = GetComponent<Collider2D>();
+        Collider2D[] misColliders = GetComponents<Collider2D>();
 
         foreach (GameObject plataforma in plataformas)
         {
             Collider2D colliderPlataforma = plataforma.GetComponent<Collider2D>();
-            if (colliderPlataforma != null && miCollider != null)
+            if (colliderPlataforma != null)
             {
-                Physics2D.IgnoreCollision(miCollider, colliderPlataforma);
+                foreach (Collider2D miCollider in misColliders)
+                {
+                    if (!miCollider.isTrigger)
+                    {
+                        Physics2D.IgnoreCollision(miCollider, colliderPlataforma);
+                    }
+                }
+            }
+        }
+    }
+
+    void IgnorarAlJugador()
+    {
+        GameObject jugador = GameObject.FindGameObjectWithTag("Player");
+
+        if (jugador != null)
+        {
+            Collider2D colliderJugador = jugador.GetComponent<Collider2D>();
+            Collider2D[] misColliders = GetComponents<Collider2D>();
+
+            foreach (Collider2D miCollider in misColliders)
+            {
+                if (!miCollider.isTrigger && colliderJugador != null)
+                {
+                    Physics2D.IgnoreCollision(miCollider, colliderJugador);
+                }
             }
         }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        // Si choca con una pared, se da la vuelta temporalmente
         if (collision.gameObject.CompareTag("Pared"))
         {
             direccionHorizontal *= -1f;
             VoltearSprite();
         }
+    }
+
+    // --- FUNCIÓN DE DAÑO (La llama el script DanoArma de la lanza) ---
+    public void RecibirDanoDino()
+    {
+        vida--;
+        Debug.Log("¡T-Rex herido por la lanza! Vida restante: " + vida);
+
+        if (vida <= 0)
+        {
+            DerrotarDinosaurio();
+        }
+    }
+
+    void DerrotarDinosaurio()
+    {
+        Debug.Log("¡VICTORIA! El T-Rex ha sido derrotado.");
+
+        // El T-Rex desaparece
+        gameObject.SetActive(false);
+
+        // Se congela el tiempo del juego para el final épico
+        Time.timeScale = 0f;
     }
 }

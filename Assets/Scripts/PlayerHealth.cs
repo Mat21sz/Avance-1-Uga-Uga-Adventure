@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement; // ¡SÚPER IMPORTANTE! Esto nos permite cambiar de escenas
 
 public class PlayerHealth : MonoBehaviour
 {
@@ -6,36 +7,48 @@ public class PlayerHealth : MonoBehaviour
     public int vidasActuales = 3;
 
     [Header("UI de Corazones")]
-    // Aquí arrastrarás las imágenes de tu Canvas en el Inspector
     public GameObject corazon3;
     public GameObject corazon2;
     public GameObject corazon1;
 
-    // Este método DEBE ser público para que el T-Rex pueda llamarlo desde su Visual Script
     public void RecibirDano()
     {
-        // Si ya no tiene vidas, no hacemos nada
         if (vidasActuales <= 0) return;
 
-        // Restamos una vida
         vidasActuales--;
-
-        // Actualizamos la interfaz
         ActualizarUI();
 
-        // Comprobamos si Krom ha perdido todas sus vidas
         if (vidasActuales <= 0)
         {
-            Debug.Log("¡Krom ha sido derrotado por el T-Rex!");
-            // Aquí en el futuro puedes poner la lógica para reiniciar el nivel
+            Debug.Log("¡Krom ha sido derrotado!");
+            IrAGameOver(); // Llamamos a la nueva función
+        }
+    }
+
+    public void Curar()
+    {
+        if (vidasActuales < 3)
+        {
+            vidasActuales++;
+            ActualizarUI();
         }
     }
 
     private void ActualizarUI()
     {
-        // Apagamos los corazones dependiendo de la vida actual
-        if (vidasActuales < 3 && corazon3 != null) corazon3.SetActive(false);
-        if (vidasActuales < 2 && corazon2 != null) corazon2.SetActive(false);
-        if (vidasActuales < 1 && corazon1 != null) corazon1.SetActive(false);
+        if (corazon3 != null) corazon3.SetActive(vidasActuales >= 3);
+        if (corazon2 != null) corazon2.SetActive(vidasActuales >= 2);
+        if (corazon1 != null) corazon1.SetActive(vidasActuales >= 1);
+    }
+
+    // --- NUEVA FUNCIÓN PARA CAMBIAR DE ESCENA ---
+    private void IrAGameOver()
+    {
+        // 1. Memorizamos el nombre de la escena actual (el nivel que estamos jugando)
+        string nombreEscenaActual = SceneManager.GetActiveScene().name;
+        PlayerPrefs.SetString("NivelGuardado", nombreEscenaActual);
+
+        // 2. Cargamos la pantalla de Game Over
+        SceneManager.LoadScene("GameOver");
     }
 }

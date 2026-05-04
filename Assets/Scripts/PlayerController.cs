@@ -4,25 +4,36 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Movimiento")]
     public float velocidad = 5f;
-    public float fuerzaSalto = 6f; // Un poco más alto para que el salto se sienta bien
+    public float fuerzaSalto = 6f;
 
     [Header("Detección de Suelo")]
     public Transform controladorSuelo;
     public float radioSuelo = 0.2f;
     public LayerMask capaSuelo;
 
+    [Header("Combate")]
+    public bool tieneLanza = false;
+    public GameObject lanzaEnMano; // El objeto de la lanza que es hijo del hueso de la mano
+
     private Rigidbody2D rb;
     private Animator animator;
     private float movimientoHorizontal;
     private bool enSuelo;
-
-    // Como a la derecha camina bien, esto debe empezar en true
     private bool mirandoDerecha = true;
 
     void Start()
     {
+        // Esto garantiza que al darle Play, el universo vuelva a moverse (por si se congeló en el intento anterior)
+        Time.timeScale = 1f;
+
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+
+        // Nos aseguramos de que Krom empiece con la lanza invisible (si no la ha recogido)
+        if (!tieneLanza && lanzaEnMano != null)
+        {
+            lanzaEnMano.SetActive(false);
+        }
     }
 
     void Update()
@@ -47,23 +58,27 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 4. Salto con la barra espaciadora
+        // 4. Salto
         if (Input.GetKeyDown(KeyCode.Space) && enSuelo)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
         }
 
-        // 5. Control de Animaciones
+        // 5. Ataque (con la tecla X o clic izquierdo)
+        if (Input.GetKeyDown(KeyCode.X) || Input.GetMouseButtonDown(0))
+        {
+            animator.SetTrigger("Atacar");
+        }
+
+        // 6. Control de Animaciones
         animator.SetBool("Caminando", movimientoHorizontal != 0);
         animator.SetBool("Saltando", !enSuelo);
 
-        // 6. Voltear el sprite
-        // Si me muevo a la derecha (> 0) y NO estoy mirando a la derecha, voltear
+        // 7. Voltear el sprite
         if (movimientoHorizontal > 0 && !mirandoDerecha)
         {
             Voltear();
         }
-        // Si me muevo a la izquierda (< 0) y ESTOY mirando a la derecha, voltear
         else if (movimientoHorizontal < 0 && mirandoDerecha)
         {
             Voltear();
@@ -78,16 +93,30 @@ public class PlayerController : MonoBehaviour
 
     private void Voltear()
     {
-        // Invertimos el estado del booleano
         mirandoDerecha = !mirandoDerecha;
-
-        // Multiplicamos la escala local X por -1 para girar todo el objeto
         Vector3 escala = transform.localScale;
         escala.x *= -1;
         transform.localScale = escala;
     }
 
-    // Dibujo de guía en la escena
+    // --- FUNCIÓN PARA EQUIPAR EL ARMA AL TOCARLA EN EL SUELO ---
+    public void EquiparLanza()
+    {
+        tieneLanza = true;
+
+        // Hacemos visible la lanza que Krom tiene en su hueso
+        if (lanzaEnMano != null)
+        {
+            lanzaEnMano.SetActive(true);
+        }
+
+        // Le avisamos al Animator que Krom está armado
+        animator.SetBool("TieneLanza", true);
+
+        Debug.Log("¡Krom ahora tiene la Lanza!");
+    }
+
+    // Dibujo de guía en la escena para el suelo
     private void OnDrawGizmos()
     {
         if (controladorSuelo != null)

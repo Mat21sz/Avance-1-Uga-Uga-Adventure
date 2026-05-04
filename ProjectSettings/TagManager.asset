@@ -8,6 +8,8 @@ TagManager:
   - Pared
   - Suelo
   - Jugador
+  - PuntoBistec
+  - Enemigo
   layers:
   - Default
   - TransparentFX
