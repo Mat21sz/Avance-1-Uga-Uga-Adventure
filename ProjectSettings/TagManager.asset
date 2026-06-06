@@ -10,6 +10,7 @@ TagManager:
   - Jugador
   - PuntoBistec
   - Enemigo
+  - platform
   layers:
   - Default
   - TransparentFX
@@ -20,7 +21,7 @@ TagManager:
   - Suelo
   - Jugador
   - Enemigo
-  - 
+  - Plataforma
   - 
   - 
   - 
@@ -46,6 +47,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Personaje
+    uniqueID: 1621306339
     locked: 0
   m_RenderingLayers:
   - Default

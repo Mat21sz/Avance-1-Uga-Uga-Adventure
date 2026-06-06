@@ -13,44 +13,52 @@ public class PlayerController : MonoBehaviour
 
     [Header("Combate")]
     public bool tieneLanza = false;
-    public GameObject lanzaEnMano; // El objeto de la lanza que es hijo del hueso de la mano
+    public GameObject lanzaEnMano;
+    [Tooltip("Tiempo de espera antes de poder volver a atacar (evita el bucle de sonido)")]
+    public float cooldownAtaque = 0.5f;
+    private float temporizadorAtaque;
+
+    [Header("Efectos de Sonido (Acciones)")]
+    public AudioSource audioSource;
+    public AudioClip sfxSalto;
+    public AudioClip sfxAtaque;
+
+    [Header("Game Feel - Tiempos (Buffers)")]
+    public float tiempoCoyote = 0.2f;
+    private float contadorCoyote;
+
+    public float tiempoBufferSalto = 0.2f;
+    private float contadorBufferSalto;
 
     private Rigidbody2D rb;
     private Animator animator;
+
     private float movimientoHorizontal;
     private bool enSuelo;
     private bool mirandoDerecha = true;
 
     void Start()
     {
-        // Esto garantiza que al darle Play, el universo vuelva a moverse (por si se congeló en el intento anterior)
         Time.timeScale = 1f;
-
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
 
-        // Nos aseguramos de que Krom empiece con la lanza invisible (si no la ha recogido)
-        if (!tieneLanza && lanzaEnMano != null)
-        {
-            lanzaEnMano.SetActive(false);
-        }
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        if (!tieneLanza && lanzaEnMano != null) lanzaEnMano.SetActive(false);
     }
 
     void Update()
     {
-        // 1. Detección de Inputs
         movimientoHorizontal = Input.GetAxisRaw("Horizontal");
 
-        // 2. Comprobar Suelo por Capa (Layer)
+        // --- DETECCIÓN DE SUELO ---
         enSuelo = Physics2D.OverlapCircle(controladorSuelo.position, radioSuelo, capaSuelo);
-
-        // 3. Comprobar Suelo por Tag "Plataforma" (Si no detectó la capa)
         if (!enSuelo)
         {
             Collider2D[] objetosBajoLosPies = Physics2D.OverlapCircleAll(controladorSuelo.position, radioSuelo);
             foreach (Collider2D obj in objetosBajoLosPies)
             {
-                if (obj.CompareTag("Plataforma"))
+                if (obj.CompareTag("Plataforma") || obj.CompareTag("Enemigo"))
                 {
                     enSuelo = true;
                     break;
@@ -58,36 +66,59 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // 4. Salto
-        if (Input.GetKeyDown(KeyCode.Space) && enSuelo)
+        if (enSuelo) contadorCoyote = tiempoCoyote;
+        else contadorCoyote -= Time.deltaTime;
+
+        // --- SALTO Y BUFFERS ---
+        if (Input.GetKeyDown(KeyCode.Space)) contadorBufferSalto = tiempoBufferSalto;
+        else contadorBufferSalto -= Time.deltaTime;
+
+        if (contadorBufferSalto > 0f && contadorCoyote > 0f)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, fuerzaSalto);
+            contadorBufferSalto = 0f;
+            contadorCoyote = 0f;
+
+            if (sfxSalto != null && audioSource != null) audioSource.PlayOneShot(sfxSalto);
         }
 
-        // 5. Ataque (con la tecla X o clic izquierdo)
-        if (Input.GetKeyDown(KeyCode.X) || Input.GetMouseButtonDown(0))
+        if (Input.GetKeyUp(KeyCode.Space) && rb.linearVelocity.y > 0f)
         {
-            animator.SetTrigger("Atacar");
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f);
+            contadorCoyote = 0f;
         }
 
-        // 6. Control de Animaciones
+        // --- SISTEMA DE COMBATE ---
+        if (temporizadorAtaque > 0)
+        {
+            temporizadorAtaque -= Time.deltaTime;
+        }
+
+        // ¡AQUÍ ESTÁ EL CAMBIO! Ahora exige que tieneLanza sea verdadero (true) para atacar
+        if (temporizadorAtaque <= 0f && tieneLanza)
+        {
+            if (Input.GetKeyDown(KeyCode.X) || Input.GetMouseButtonDown(0))
+            {
+                animator.SetTrigger("Atacar");
+                temporizadorAtaque = cooldownAtaque;
+
+                if (sfxAtaque != null && audioSource != null)
+                {
+                    audioSource.PlayOneShot(sfxAtaque);
+                }
+            }
+        }
+
+        // --- ANIMACIONES Y GIRO ---
         animator.SetBool("Caminando", movimientoHorizontal != 0);
         animator.SetBool("Saltando", !enSuelo);
 
-        // 7. Voltear el sprite
-        if (movimientoHorizontal > 0 && !mirandoDerecha)
-        {
-            Voltear();
-        }
-        else if (movimientoHorizontal < 0 && mirandoDerecha)
-        {
-            Voltear();
-        }
+        if (movimientoHorizontal > 0 && !mirandoDerecha) Voltear();
+        else if (movimientoHorizontal < 0 && mirandoDerecha) Voltear();
     }
 
     void FixedUpdate()
     {
-        // El movimiento físico real
         rb.linearVelocity = new Vector2(movimientoHorizontal * velocidad, rb.linearVelocity.y);
     }
 
@@ -99,24 +130,13 @@ public class PlayerController : MonoBehaviour
         transform.localScale = escala;
     }
 
-    // --- FUNCIÓN PARA EQUIPAR EL ARMA AL TOCARLA EN EL SUELO ---
     public void EquiparLanza()
     {
         tieneLanza = true;
-
-        // Hacemos visible la lanza que Krom tiene en su hueso
-        if (lanzaEnMano != null)
-        {
-            lanzaEnMano.SetActive(true);
-        }
-
-        // Le avisamos al Animator que Krom está armado
+        if (lanzaEnMano != null) lanzaEnMano.SetActive(true);
         animator.SetBool("TieneLanza", true);
-
-        Debug.Log("¡Krom ahora tiene la Lanza!");
     }
 
-    // Dibujo de guía en la escena para el suelo
     private void OnDrawGizmos()
     {
         if (controladorSuelo != null)

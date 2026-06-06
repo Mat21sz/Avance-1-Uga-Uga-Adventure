@@ -12,16 +12,22 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: c6bb591c730cae041b71f5d8da886bf8
   - enabled: 1
-    path: Assets/Scenes/NivelJefe.unity
-    guid: 4d241ffb499824949962ef630362ec3c
+    path: Assets/Scenes/Nivel1.unity
+    guid: 89340bf07a9d72e4d992b6ce7b94541e
   - enabled: 1
-    path: Assets/Scenes/NivelJefe.unity
-    guid: 4d241ffb499824949962ef630362ec3c
+    path: Assets/Scenes/Nivel2.unity
+    guid: ec4890d759e4ccb4d9040d57fa5a1067
   - enabled: 1
     path: Assets/Scenes/GameOver.unity
     guid: e2c33b322107f81438e26469f7ade28e
   - enabled: 1
     path: Assets/Scenes/Win.unity
     guid: ca8d992047003b648821fa4243cb19bc
+  - enabled: 1
+    path: Assets/Scenes/NivelJefe.unity
+    guid: 4d241ffb499824949962ef630362ec3c
+  - enabled: 0
+    path: Assets/Scenes/NivelJefe.unity
+    guid: 4d241ffb499824949962ef630362ec3c
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

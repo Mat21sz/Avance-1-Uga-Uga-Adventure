@@ -7,7 +7,7 @@ public class MenuSystem : MonoBehaviour
     public void Jugar()
     {
         // Asegúrate de que el nombre "ScenaPrincipal" esté escrito exactamente igual que tu archivo de escena
-        SceneManager.LoadScene("NivelJefe");
+        SceneManager.LoadScene("Nivel1");
     }
 
     // Este método se asignará a tu botón de salir
